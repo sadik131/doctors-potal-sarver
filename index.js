@@ -15,21 +15,22 @@ const uri = `mongodb+srv://${process.env.USER_ID}:${process.env.USER_PASSWORD}@c
 
 const client = new MongoClient(uri);
 
-// const VeryfyJWT = (req , res , next)=>{
-//     const authorization = req.headers.authorization
-//     if(!authorization){
-//         res.status(401).send({message: "UnAuthorization access"})
-//     }
-//     const token = authorization.split(" ")[1]
-//     jwt.verify(token, process.env.Access_token, function(err, decoded) {
-//         if(err){
-//             res.status(403).send({message:"forbiden access"})
-//         }
-//         console.log("decoded",decoded);
-//         req.decoded = decoded
-//         next()
-//       });
-// } 
+const VeryfyJWT = (req , res , next) =>{
+    const authHeader = req.headers.authorization
+    if(!authHeader){
+        res.status(401).send({message:"Unauthorize access"})
+    }
+    const token = authHeader.split(' ')[1]
+    console.log(token);
+    jwt.verify(token, process.env.Access_token, function(err, decoded) {
+        if(err){
+            res.status(403).send({message:"forbiden access"})
+        }
+        req.decoded = decoded
+        next()
+      });
+}
+
 
 async function run() {
     try {
@@ -37,10 +38,15 @@ async function run() {
         const sarviseCollection = client.db("doctor-potal").collection("sarvises")
         const appointmentCollection = client.db("doctor-potal").collection("appointment")
         const usersCollection = client.db("doctor-potal").collection("user")
+        const doctorsCollection = client.db("doctor-potal").collection("doctors")
 
         //all sarvises
         app.get("/sarvises", async (req, res) => {
             const result = await sarviseCollection.find().toArray()
+            res.send(result)
+        });
+        app.get("/Sname", async (req, res) => {
+            const result = await sarviseCollection.find().project({name:1}).toArray()
             res.send(result)
         });
 
@@ -91,20 +97,46 @@ async function run() {
         // make user to admin
         app.post("/users/admin/:email",  async(req , res) =>{
             const email = req.params.email
-            const filter = {email}
+            // const request = req.decoded.email
+            // const requestId = await usersCollection.findOne({email : request})
+            // if(requestId.roll === "admin"){
+
+                const filter = {email}
                 const updateDoc = {
                     $set:{roll:"admin"}
                 }
                 const result = await usersCollection.updateOne(filter, updateDoc);
                 res.send(result)
-            }
+            // }
+        }
         );
 
         //get all user
-        app.get("/user", async(req , res) =>{
+        app.get("/user",  async(req , res) =>{
             const user = await usersCollection.find().toArray()
             // console.log(req.decoded.email);
             res.send(user)
+        });
+
+        // add doctor on data base
+        app.post("/doctors" , async(req , res) =>{
+            const doctor = req.body
+            const result = await doctorsCollection.insertOne(doctor)
+            res.send(result)
+        });
+
+        // get all the doctor
+        app.get('/doctors', async(req , res) =>{
+            const result = await doctorsCollection.find().toArray()
+            res.send(result)
+        });
+
+        //delete a doctor
+        app.delete('/doctors/:email' , async(req , res) =>{
+            const email = req.params.email
+            const query = {email:email}
+            const result = await doctorsCollection.deleteOne(query)
+            res.send(result)
         })
     }
     finally {
