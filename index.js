@@ -21,12 +21,14 @@ const VeryfyJWT = (req , res , next) =>{
         res.status(401).send({message:"Unauthorize access"})
     }
     const token = authHeader.split(' ')[1]
-    console.log(token);
+    
     jwt.verify(token, process.env.Access_token, function(err, decoded) {
         if(err){
             res.status(403).send({message:"forbiden access"})
         }
-        req.decoded = decoded
+        
+        res.decoded = decoded
+        
         next()
       });
 }
@@ -112,7 +114,7 @@ async function run() {
         );
 
         //get all user
-        app.get("/user",  async(req , res) =>{
+        app.get("/user", async(req , res) =>{
             const user = await usersCollection.find().toArray()
             // console.log(req.decoded.email);
             res.send(user)
